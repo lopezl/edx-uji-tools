@@ -1,0 +1,41 @@
+#!/bin/bash
+
+set -e
+D="/opt/edx"
+EDX="$D/edx"
+
+if [ -z "$EDX_SYSTEM" ]; then
+	EDX_SYSTEM="$1"
+fi
+
+case "$EDX_SYSTEM" in
+	lms)
+		DJANGO_SETTINGS_MODULE="lms.envs.cms.uji"
+		;;
+
+	cms)
+		DJANGO_SETTINGS_MODULE="cms.envs.uji"
+		;;
+	*)
+		cat >&2 <<-EOF
+		Invalid system
+		EOF
+		exit 1
+esac
+
+source "$D/env.sh"
+[ -f "$D/tmp/${EDX_SYSTEM}.pid" ] && (
+	set +e
+	kill -TERM $(cat "$D/tmp/${EDX_SYSTEM}.pid")
+	rm "$D/tmp/${EDX_SYSTEM}.pid"
+)
+(
+	while [ ! -f "$D/tmp/${EDX_SYSTEM}.sock" ]; do
+		sleep 1
+	done
+	chmod a+w "$D/tmp/${EDX_SYSTEM}.sock"
+	exit 0
+) &
+DJANGO_SETTINGS_MODULE="$DJANGO_SETTINGS_MODULE" "$D/env/bin/python2.7" "$D/env/bin/django-admin.py" runfcgi --pythonpath="$D/edx" socket="$D/tmp/${EDX_SYSTEM}.sock" pidfile="$D/tmp/${EDX_SYSTEM}.pid" outlog="$D/tmp/${EDX_SYSTEM}.out.log" errlog="$D/tmp/${EDX_SYSTEM}.err.log" debug=True
+exit 0
+

@@ -1,0 +1,37 @@
+D="/opt/edx"
+EDX="$D"/edx
+
+case "$EDX_SYSTEM" in
+	lms)
+		DJANGO_SETTINGS="lms.envs.cms.uji"
+		EDX_STATIC_FILES="$D/staticfiles-lms/"
+		;;
+	cms)
+		DJANGO_SETTINGS="cms.envs.uji"
+		EDX_STATIC_FILES="$D/staticfiles-cms/"
+		;;
+	*)
+		echo "Invalid system" >&2
+		exit 0
+		;;
+esac
+
+[ -d "$D/staticfiles" ] && rm -rf "$D/staticfiles" 
+[ -d "$D/staticfiles-$EDX_SYSTEM" ] && rm -rf "$D/staticfiles-$EDX_SYSTEM" 
+
+source "$D/env.sh"
+
+#(cd "$D/edx" && rake lms:gather_assets:cms.uji && mv "$D/staticfiles" "$D/staticfiles-lms/")
+django-admin.py preprocess_assets --traceback --settings="$DJANGO_SETTINGS" --pythonpath="$EDX"
+
+xmodule_assets "$EDX"/common/static/xmodule
+sass --style compressed --load-path "$EDX"/common/static/sass --require "$EDX"/common/static/sass/bourbon/lib/bourbon.rb --update -E utf-8 "$EDX"/{"$EDX_SYSTEM",common}/static
+"$EDX/node_modules/.bin/coffee" --compile "$EDX"
+
+django-admin.py collectstatic --traceback --settings=$DJANGO_SETTINGS --pythonpath="$EDX" --noinput > /dev/null
+
+mv "$D/staticfiles" "$EDX_STATIC_FILES"
+rsync -a "$EDX/common/static/" "$EDX_STATIC_FILES/"
+rsync -a "$EDX/$EDX_SYSTEM/static/" "$EDX_STATIC_FILES/"
+rm -rf -- "$D/staticfiles"
+
