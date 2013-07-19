@@ -1,0 +1,18 @@
+#!/bin/bash
+
+D="${D:-/opt/edx}"
+PORT="${PORT:-8082}"
+
+CS_SERVICE="$D/cs_comments_service"
+LOG="$D/tmp/cs_service.log"
+PIDFILE="$D/tmp/cs_service.pid"
+
+(
+	cd "$CS_SERVICE"
+	source "$D/env.sh"
+	ruby "$CS_SERVICE/app.rb" -p "$PORT" 2>>"$LOG" 1>>"$LOG" &
+	echo "$!" > "$PIDFILE"
+) 
+
+exit 0
+
