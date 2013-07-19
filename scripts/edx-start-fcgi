@@ -1,0 +1,37 @@
+#!/bin/bash
+
+D="${D:-/opt/edx}"
+EDX="${EDX:-$D/edx}"
+EDX_SYSTEM="${EDX_SYSTEM:-$1}"
+
+case "$EDX_SYSTEM" in
+	lms)
+		DJANGO_SETTINGS_MODULE="lms.envs.cms.uji"
+		;;
+
+	cms)
+		DJANGO_SETTINGS_MODULE="cms.envs.uji"
+		;;
+	*)
+		cat >&2 <<-EOF
+		Invalid system
+		EOF
+		exit 1
+esac
+
+source "$D/env.sh"
+
+[ -f "$D/tmp/${EDX_SYSTEM}.pid" ] && (
+	set +e
+	kill -TERM $(cat "$D/tmp/${EDX_SYSTEM}.pid")
+	rm "$D/tmp/${EDX_SYSTEM}.pid"
+)
+
+(
+	exit 0
+) &
+DJANGO_SETTINGS_MODULE="$DJANGO_SETTINGS_MODULE" "$D/env/bin/python2.7" "$D/env/bin/django-admin.py" runfcgi --pythonpath="$D/edx" socket="$D/tmp/${EDX_SYSTEM}.sock" pidfile="$D/tmp/${EDX_SYSTEM}.pid" outlog="$D/tmp/${EDX_SYSTEM}.out.log" errlog="$D/tmp/${EDX_SYSTEM}.err.log" debug=True daemonize=True
+
+sleep 1
+chmod 666 "$D/tmp/${EDX_SYSTEM}.sock"
+

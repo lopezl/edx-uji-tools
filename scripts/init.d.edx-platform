@@ -20,8 +20,8 @@
 # Source function library.
 . /etc/rc.d/init.d/functions
 
-#exec="/usr/sbin/edx-platform"
-prog="edx-platform"
+edxroot="/opt/edx"
+launcher="$edxroot/env/bin/edx-start-fcgi"
 user=edx
 
 start() {
@@ -29,7 +29,7 @@ start() {
     [ -f $config ] || exit 6
     echo -n $"Starting edx-platform: "
     for proc in lms cms; do
-	runuser -s /bin/bash $user -c "/opt/edx/start-fcgi $proc" || exit 1
+	runuser -s /bin/bash $user -c "$launcher $proc" || exit 1
 	echo -n $"$proc "
     done; echo 
 
@@ -39,8 +39,8 @@ start() {
 stop() {
     echo -n $"Stopping edx-platform: "
     for proc in lms cms; do
-        [ -f "/opt/edx/tmp/$proc.pid" ] && kill -TERM "$(cat /opt/edx/tmp/$proc.pid)"
-        rm /opt/edx/tmp/$proc.{pid,sock} 2>/dev/null
+        [ -f "$edxroot/tmp/$proc.pid" ] && kill -TERM "$(cat $edxroot/tmp/$proc.pid)"
+        rm $edxroot/tmp/$proc.{pid,sock} 2>/dev/null
 	echo -n $"$proc "
     done; echo 
  

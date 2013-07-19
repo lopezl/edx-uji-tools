@@ -1,5 +1,8 @@
-D="/opt/edx"
-EDX="$D"/edx
+#!/bin/bash
+
+D="${D:-/opt/edx}"
+EDX="${EDX:-$D/edx}"
+EDX_SYSTEM="${EDX_SYSTEM:-$1}"
 
 case "$EDX_SYSTEM" in
 	lms)
@@ -11,15 +14,28 @@ case "$EDX_SYSTEM" in
 		EDX_STATIC_FILES="$D/staticfiles-cms/"
 		;;
 	*)
-		echo "Invalid system" >&2
-		exit 0
+		cat >&2 <<-EOF
+		Set EDX_SYSTEM environment variable or pass a value as parameter.
+		Ej:
+		    EDX_SYSTEM=(lms|cms) $0
+		    $0 (lms|cms)
+		EOF
+		exit 1
 		;;
 esac
 
+source "$D/env.sh" || { echo "Missing environment";  exit 1; }
+
+for P in django-admin.py xmodule_assets sass rsync
+do
+	if [ -z "$(which $P)" ]; then
+		echo "'$P' is missing" >&2
+		exit 1
+	fi
+done
+
 [ -d "$D/staticfiles" ] && rm -rf "$D/staticfiles" 
 [ -d "$D/staticfiles-$EDX_SYSTEM" ] && rm -rf "$D/staticfiles-$EDX_SYSTEM" 
-
-source "$D/env.sh"
 
 #(cd "$D/edx" && rake lms:gather_assets:cms.uji && mv "$D/staticfiles" "$D/staticfiles-lms/")
 django-admin.py preprocess_assets --traceback --settings="$DJANGO_SETTINGS" --pythonpath="$EDX"
